@@ -552,7 +552,7 @@ def auto_portraitImage_optimisation(my_image, my_folder=depotdir,
     #    return 0, 0
 
 def write_results_on_image( my_image_name, my_text1, my_text2, my_folder=depotdir):
-    my_size1=25
+    my_size1=50
     font1 = ImageFont.truetype("Lobster-Regular.ttf", my_size1)
     font2 = ImageFont.truetype("Lobster-Regular.ttf", my_size1*2)
     my_image = get_image(my_image_name, my_folder)
@@ -562,8 +562,8 @@ def write_results_on_image( my_image_name, my_text1, my_text2, my_folder=depotdi
     text2 = my_text2
     textwidth, textheight = draw.textsize(text1)
     margin = 50
-    x = textwidth + margin - 100
-    y = height - textheight - margin
-    draw.text((x, y), text1, font = font1, fill=(100,100,100))
-    draw.text((x,y-50), text2, font=font2, fill=(250,250,100))
+    x = textwidth + margin - 150
+    y = height - textheight - margin - 50
+    draw.text((x, y), text1, font = font1, fill=(250,250,100))
+    #draw.text((x,y-50), text2, font=font2, fill=(250,250,100))
     my_image.save(my_folder + '/' + my_image_name +'.jpg', "JPEG")
