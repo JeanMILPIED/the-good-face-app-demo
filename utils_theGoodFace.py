@@ -14,6 +14,8 @@ import joblib
 
 import time
 
+#from rembg import remove
+
 
 basedir = '.'
 depotdir = '.'
@@ -304,6 +306,10 @@ def average_pixel_width(my_image_object):
     edges_sigma1 = Canny(blurred, lower, upper) / 255
     apw = (float(np.sum(edges_sigma1)) / (img.size[0] * img.size[1]))
     return [round(apw * 100, 2)]
+#
+# def remove_background(my_image_object):
+#     output = remove(my_image_object)
+#     return output
 
 
 def all_portrait_features(my_image_object,my_cascade_face, my_cascade_profileface, my_cascade_eye, my_cascade_smile, my_cascade_glasses):
@@ -522,6 +528,9 @@ def auto_portraitImage_optimisation(my_image, my_folder=depotdir,
     out[mask == 0] = blur[mask == 0]
     out = medianBlur(out, 3)
     imwrite(my_folder + '/' + my_image + '_ALLcorrected.jpg', out)
+    #
+    # out_nobgd=remove_background(out)
+    # imwrite(my_folder + '/' + my_image + '_ALLcorrected.jpg', out_nobgd)
 
     # return out features before and after modifications
     # we load scaler and models (3 models and we aggregate the score)
@@ -532,7 +541,7 @@ def auto_portraitImage_optimisation(my_image, my_folder=depotdir,
     result_initial = predict_proba_from_image_feat(feat_df_initial, my_scaler, my_RFmodel, my_NNmodel, my_SVCmodel)
     total_proba_initial = np.round(np.sum([result_initial[0][1], result_initial[1][1], result_initial[2][1]])/2,1)
 
-    feat_df_dict_final = get_features_from_new_image(get_image(my_image + '_ALLcorrected', my_folder),my_cascade_face, my_cascade_profileface, my_cascade_eye, my_cascade_smile, my_cascade_glasses)
+    feat_df_dict_final = get_features_from_new_image(get_image(my_image + '_ALLcorrected', my_folder), my_cascade_face, my_cascade_profileface, my_cascade_eye, my_cascade_smile, my_cascade_glasses)
     feat_df_final=list(feat_df_dict_final.values())
     result_final = predict_proba_from_image_feat(feat_df_final, my_scaler, my_RFmodel, my_NNmodel, my_SVCmodel)
     total_proba_final = np.round(np.sum([result_final[0][1], result_final[1][1], result_final[2][1]])/2,1)
