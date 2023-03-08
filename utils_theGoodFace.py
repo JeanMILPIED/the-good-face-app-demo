@@ -514,12 +514,16 @@ def auto_portraitImage_optimisation(my_image, my_folder=depotdir,
     y_size = int(crop_img.shape[1] * 600 / (crop_img.shape[0]+1))
     crop_img_resized = resize(crop_img, (y_size, 600), interpolation=cv2.INTER_LINEAR)
 
-    # 5. blur the background
+    #remove background
+    out=crop_img_resized.copy()
+    out_nobgd=remove_background(out)
+    imwrite(my_folder + '/' + my_image + '_ALLcorrected.jpg', out_nobgd)
+
+    #change the colour of the background
     # we convert back the image from BGR to RGB
-    img_cv = crop_img_resized.copy()
-    gray_img = cvtColor(crop_img_resized, cv2.COLOR_BGR2GRAY)
-    thresh = adaptiveThreshold(gray_img, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, my_param_1,
-                                   my_param_2)
+    img_cv = out_nobgd.copy()
+    gray_img = cvtColor(out_nobgd, cv2.COLOR_BGR2GRAY)
+    thresh = adaptiveThreshold(gray_img, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, my_param_1,my_param_2)
     thresh = cv2.bitwise_not(thresh)
     element = cv2.getStructuringElement(shape=cv2.MORPH_RECT, ksize=(my_k_size, my_k_size))
     morph_img = thresh.copy()
@@ -530,17 +534,21 @@ def auto_portraitImage_optimisation(my_image, my_folder=depotdir,
     number_of_areas = sorted_areas.shape[0]
 
     cnt = contours[areas.index(sorted_areas[-1])]  # the biggest contour
-
     mask = np.zeros(gray_img.shape, np.uint8)
     cv2.drawContours(mask, [cnt], 0, 255, -1)
-    blur = GaussianBlur(img_cv, (5, 5), my_param_3)
+    #blur = GaussianBlur(img_cv, (5, 5), my_param_3)
+
+    my_colour=(255,204,153)
+    # Fill image with red color
+    img_shape=list(img_cv.shape[0:2])+[3]
+    my_background=np.full(tuple(img_shape), my_colour, np.uint8)
+    my_background=cv2.cvtColor(my_background, cv2.COLOR_RGB2RGBA)
+    #cv2.rectangle(whiteblankimage, pt1=(200,200), pt2=(300,300), color=(0,0,255), thickness=-1)
     out = img_cv.copy()
-    out[mask == 0] = blur[mask == 0]
-    out = medianBlur(out, 3)
+    print(out)
+    out[gray_img == 0] = my_background[gray_img == 0]
+    #out = medianBlur(out, 3)
     imwrite(my_folder + '/' + my_image + '_ALLcorrected.jpg', out)
-    #
-    out_nobgd=remove_background(out)
-    imwrite(my_folder + '/' + my_image + '_ALLcorrected.jpg', out_nobgd)
 
     # return out features before and after modifications
     # we load scaler and models (3 models and we aggregate the score)
