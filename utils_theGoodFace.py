@@ -14,7 +14,7 @@ import joblib
 
 import time
 
-#from rembg import remove
+from rembg import remove
 
 
 basedir = '.'
@@ -306,10 +306,10 @@ def average_pixel_width(my_image_object):
     edges_sigma1 = Canny(blurred, lower, upper) / 255
     apw = (float(np.sum(edges_sigma1)) / (img.size[0] * img.size[1]))
     return [round(apw * 100, 2)]
-#
-# def remove_background(my_image_object):
-#     output = remove(my_image_object)
-#     return output
+
+def remove_background(my_image_object):
+     output = remove(my_image_object)
+     return output
 
 
 def all_portrait_features(my_image_object,my_cascade_face, my_cascade_profileface, my_cascade_eye, my_cascade_smile, my_cascade_glasses):
@@ -363,8 +363,16 @@ def get_features_from_new_image(image_object,my_cascade_face, my_cascade_profile
     else:
         my_pc_smile = 0
     features_dict['smile_%'] = my_pc_smile
+    features_dict_ok={}
+    for my_feat in ['filename', 'pixel_X', 'pixel_Y', 'max_I', 'min_I',
+       'mean_I', 'std_I', 'type', 'face_area', 'eye_status', 'tot_eye_area',
+       'face_angle', 'smile_status', 'smile_area', 'glasses_status',
+       'glasses_area', 'blurry_rate', 'light_percent', 'dark_percent',
+       'APW_rate', 'face_%', 'smile_%']:
+        features_dict_ok[my_feat]=features_dict[my_feat]
+    features_dict_ok = clean_feat_vector(features_dict_ok)
     features_dict = clean_feat_vector(features_dict)
-    return features_dict
+    return features_dict_ok, features_dict
 
 
 ### functions to predict score from models
@@ -375,11 +383,12 @@ def load_scale_models(my_model_folder=basedir):
     :return: trained scaler and models
     '''
     # we load the scaler
-    my_scaler = joblib.load(my_model_folder + '/theScaler.gz')
+    my_scaler = joblib.load(my_model_folder + '/models2/theScaler.gz')
     # we load the models
-    my_RFmodel = joblib.load(my_model_folder + '/theRFmodel.sav')
-    my_NNmodel = joblib.load(my_model_folder + '/theNNmodel.sav')
-    my_SVCmodel = joblib.load(my_model_folder + '/theSVCmodel.sav')
+    my_RFmodel = joblib.load(my_model_folder + '/models2/theRFmodel.sav')
+    #my_NNmodel = joblib.load(my_model_folder + '/models2/theNNmodel.sav')
+    my_NNmodel = joblib.load(my_model_folder + '/models2/theRFmodel.sav')
+    my_SVCmodel = joblib.load(my_model_folder + '/models2/theSVCmodel.sav')
     return my_scaler, my_RFmodel, my_NNmodel, my_SVCmodel
 
 
@@ -394,6 +403,7 @@ def predict_proba_from_image_feat(my_image_feat, my_scaler, my_rfmodel, my_nnmod
     :return: list of probability of class1 from each classifier
     '''
     X = np.array(my_image_feat[1:]).reshape(1,-1)
+    print(X.shape)
     X_scale = my_scaler.transform(X)
     Y_pred_rf = my_rfmodel.predict_proba(X_scale)
     Y_pred_nn = my_nnmodel.predict_proba(X_scale)
@@ -483,22 +493,22 @@ def auto_portraitImage_optimisation(my_image, my_folder=depotdir,
 
     # 4. crop the image
     img = sharpened_image
-    feat_dict = get_features_from_new_image(initial_img,my_cascade_face, my_cascade_profileface, my_cascade_eye, my_cascade_smile, my_cascade_glasses)
-    central_x = int(feat_dict["central_face_x"])
-    central_y = int(feat_dict["central_face_y"])
-    crop_amplitude = int(np.sqrt(feat_dict["face_area"]) / 2 * my_crop_factor)
+    feat_dict, feat_dict_raw = get_features_from_new_image(initial_img,my_cascade_face, my_cascade_profileface, my_cascade_eye, my_cascade_smile, my_cascade_glasses)
+    central_x = int(feat_dict_raw["central_face_x"])
+    central_y = int(feat_dict_raw["central_face_y"])
+    crop_amplitude = int(np.sqrt(feat_dict_raw["face_area"]) / 2 * my_crop_factor)
     x_min = central_x - crop_amplitude
     x_max = central_x + crop_amplitude
     y_min = central_y - crop_amplitude
     y_max = central_y + crop_amplitude
     if x_min < 0:
         x_min = 0
-    if x_max > int(feat_dict["pixel_X"]):
-        x_max = int(feat_dict["pixel_X"])
+    if x_max > int(feat_dict_raw["pixel_X"]):
+        x_max = int(feat_dict_raw["pixel_X"])
     if y_min < 0:
         y_min = 0
-    if y_max > int(feat_dict["pixel_Y"]):
-        y_max = int(feat_dict["pixel_Y"])
+    if y_max > int(feat_dict_raw["pixel_Y"]):
+        y_max = int(feat_dict_raw["pixel_Y"])
     crop_img = img[y_min:y_max, x_min:x_max]
     target_x_size = 600
     y_size = int(crop_img.shape[1] * 600 / (crop_img.shape[0]+1))
@@ -529,8 +539,8 @@ def auto_portraitImage_optimisation(my_image, my_folder=depotdir,
     out = medianBlur(out, 3)
     imwrite(my_folder + '/' + my_image + '_ALLcorrected.jpg', out)
     #
-    # out_nobgd=remove_background(out)
-    # imwrite(my_folder + '/' + my_image + '_ALLcorrected.jpg', out_nobgd)
+    out_nobgd=remove_background(out)
+    imwrite(my_folder + '/' + my_image + '_ALLcorrected.jpg', out_nobgd)
 
     # return out features before and after modifications
     # we load scaler and models (3 models and we aggregate the score)
@@ -538,11 +548,13 @@ def auto_portraitImage_optimisation(my_image, my_folder=depotdir,
 
     #we extract features from initial image
     feat_df_initial = list(feat_dict.values())
+    print(len(feat_df_initial))
     result_initial = predict_proba_from_image_feat(feat_df_initial, my_scaler, my_RFmodel, my_NNmodel, my_SVCmodel)
     total_proba_initial = np.round(np.sum([result_initial[0][1], result_initial[1][1], result_initial[2][1]])/2,1)
 
-    feat_df_dict_final = get_features_from_new_image(get_image(my_image + '_ALLcorrected', my_folder), my_cascade_face, my_cascade_profileface, my_cascade_eye, my_cascade_smile, my_cascade_glasses)
+    feat_df_dict_final, _ = get_features_from_new_image(get_image(my_image + '_ALLcorrected', my_folder), my_cascade_face, my_cascade_profileface, my_cascade_eye, my_cascade_smile, my_cascade_glasses)
     feat_df_final=list(feat_df_dict_final.values())
+    print(len(feat_df_final))
     result_final = predict_proba_from_image_feat(feat_df_final, my_scaler, my_RFmodel, my_NNmodel, my_SVCmodel)
     total_proba_final = np.round(np.sum([result_final[0][1], result_final[1][1], result_final[2][1]])/2,1)
     #score_text1='Your previous score was '+str(total_proba_initial)
