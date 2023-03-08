@@ -14,7 +14,7 @@ def portraitImage_optimisation(image_name):
         return 'error'
 
 st.title('The-good-face 📷😎 (app demo)')
-st.header("Make a Linkedin portrait from your best shots")
+st.header("Make a Lkdn portrait from your best shots")
 st.subheader('Our AI rates your portrait and proposes a better one')
 
 portrait_img=None
@@ -49,23 +49,23 @@ if source=='Webcam':
 
 
 if portrait_img !=None:
-    try:
-        total_proba_initial, total_proba_final = auto_portraitImage_optimisation('portrait')
-        #write probas
-        col1.write('Portrait is rated at {}'.format(total_proba_initial))
-        if total_proba_initial > 0.5:
-            col1.write("Your pic is good as it is 👍")
-        else:
-            col1.write("Your pic is bad 😌")
-        col2.subheader('AI best portrait 🤩')
-        col2.image('portrait_ALLcorrected.jpg')
-        col2.write('Our portrait is rated at {}'.format(total_proba_final))
-        if total_proba_final > 0.5:
-            col2.write("Our pic is good as it is 👍")
-        else:
-            col2.write("We did not succeed in optimizing it 😱")
-    except:
-         st.write("Oups! Something went wrong")
+
+    total_proba_initial, total_proba_final = auto_portraitImage_optimisation('portrait')
+    #write probas
+    col1.write('Portrait is rated at {}'.format(total_proba_initial))
+    if total_proba_initial > 0.5:
+        col1.write("Your pic is good as it is 👍")
+    else:
+        col1.write("Your pic is bad 😌")
+    col2.subheader('AI best portrait 🤩')
+    col2.image('portrait_ALLcorrected.jpg')
+    col2.write('Our portrait is rated at {}'.format(total_proba_final))
+    if total_proba_final > 0.5:
+        col2.write("You can use this AI pic on Lkdn 👍")
+    else:
+        col2.write("We did not succeed in optimizing it 😱")
+    # except:
+    #      st.write("Oups! Something went wrong")
 
 
 
