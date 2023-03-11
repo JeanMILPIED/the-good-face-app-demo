@@ -16,7 +16,7 @@ import time
 
 from rembg import remove
 
-
+print(cv2.__version__)
 basedir = '.'
 depotdir = '.'
 print(basedir, depotdir)
@@ -305,6 +305,15 @@ def remove_background(my_image_object):
      output = remove(my_image_object)
      return output
 
+def upsample(my_image_object):
+    sr = cv2.dnn_superres.DnnSuperResImpl_create()
+    path = "EDSR_x4.pb"
+    path= "FSRCNN-small_x4.pb"
+    sr.readModel(path)
+    sr.setModel("fsrcnn", 4)
+    result = sr.upsample(my_image_object)
+    return result
+
 def all_portrait_features(my_image_object,my_cascade_face, my_cascade_profileface, my_cascade_eye, my_cascade_smile, my_cascade_glasses):
     '''
     :param my_image_name:
@@ -429,13 +438,59 @@ def auto_portraitImage_optimisation(my_image, my_folder=depotdir,
     initial_img = get_image(my_image, my_folder=my_folder)
     img = np.array(initial_img.convert('RGB'))
 
-    #0. remove 
+    #0. remove background of original image
+    img=remove_background(img)
+
+    # 4. crop the image
+    #img = sharpened_image
+    img =cv2.cvtColor(img, cv2.COLOR_RGBA2RGB)
+    feat_dict, feat_dict_raw = get_features_from_new_image(initial_img,my_cascade_face, my_cascade_profileface, my_cascade_eye, my_cascade_smile, my_cascade_glasses)
+    central_x = int(feat_dict_raw["central_face_x"])
+    central_y = int(feat_dict_raw["central_face_y"])
+    crop_amplitude = int(np.sqrt(feat_dict_raw["face_area"]) / 2 * my_crop_factor)
+    x_min = central_x - crop_amplitude
+    x_max = central_x + crop_amplitude
+    y_min = central_y - crop_amplitude
+    y_max = central_y + crop_amplitude
+    if x_min < 0:
+        x_min = 0
+    if x_max > int(feat_dict_raw["pixel_X"]):
+        x_max = int(feat_dict_raw["pixel_X"])
+    if y_min < 0:
+        y_min = 0
+    if y_max > int(feat_dict_raw["pixel_Y"]):
+        y_max = int(feat_dict_raw["pixel_Y"])
+    crop_img = img[y_min:y_max, x_min:x_max]
+    target_x_size = 600
+    y_size = int(crop_img.shape[1] * 600 / (crop_img.shape[0]+1))
+    crop_img_resized = resize(crop_img, (y_size, 600), interpolation=cv2.INTER_LINEAR)
+
+    #remove background of cropped
+    out=crop_img_resized.copy()
+    out_blur = medianBlur(out, 13)
+    # out_invert = cv2.bitwise_not(out_blur)
+    out_nobgd=remove_background(out_blur)
+    #imwrite(my_folder + '/' + my_image + '_ALLcorrected.jpg', out_nobgd)
+
+    #change the colour of the background
+    # we convert back the image from BGR to RGB
+    #img_cv = out_nobgd.copy()
+    gray_img = cvtColor(out_nobgd, cv2.COLOR_RGB2GRAY)
+    gray_img_invert = cv2.bitwise_not(gray_img)
+    my_colour=(204,255,204)
+
+    # Fill image with background colour
+    img_shape=out.shape
+    print(img_shape)
+    my_background=np.full(img_shape, my_colour, np.uint8)
+    out=cv2.cvtColor(out, cv2.COLOR_RGB2BGR)
+    out[gray_img_invert == 255] = my_background[gray_img_invert == 255]
 
     # 1. adjust_gamma
     invGamma = 1.0 / my_gamma
     table = np.array([((i / 255.0) ** invGamma) * 255 for i in np.arange(0, 256)]).astype("uint8")
     # apply gamma correction using the lookup table
-    new_gamma_image = LUT(img, table)
+    new_gamma_image = LUT(out, table)
     new_gamma_image = cvtColor(new_gamma_image, cv2.COLOR_RGB2BGR)
     # 2. auto_brightness and contrast
     gray = cvtColor(new_gamma_image, cv2.COLOR_BGR2GRAY)
@@ -476,57 +531,17 @@ def auto_portraitImage_optimisation(my_image, my_folder=depotdir,
     sharpened_image = np.maximum(sharpened_image, np.zeros(sharpened_image.shape))
     sharpened_image = np.minimum(sharpened_image, 255 * np.ones(sharpened_image.shape))
     sharpened_image = sharpened_image.round().astype(np.uint8)
-    #sharpened_image = detailEnhance(sharpened_image, 10, 0.15)
+    # sharpened_image = detailEnhance(sharpened_image, 10, 0.15)
     if my_threshold > 0:
         low_contrast_mask = np.absolute(BandC_image - blurred) < my_threshold
         np.copyto(sharpened_image, BandC_image, where=low_contrast_mask)
 
-    # 4. crop the image
-    img = sharpened_image
-    feat_dict, feat_dict_raw = get_features_from_new_image(initial_img,my_cascade_face, my_cascade_profileface, my_cascade_eye, my_cascade_smile, my_cascade_glasses)
-    central_x = int(feat_dict_raw["central_face_x"])
-    central_y = int(feat_dict_raw["central_face_y"])
-    crop_amplitude = int(np.sqrt(feat_dict_raw["face_area"]) / 2 * my_crop_factor)
-    x_min = central_x - crop_amplitude
-    x_max = central_x + crop_amplitude
-    y_min = central_y - crop_amplitude
-    y_max = central_y + crop_amplitude
-    if x_min < 0:
-        x_min = 0
-    if x_max > int(feat_dict_raw["pixel_X"]):
-        x_max = int(feat_dict_raw["pixel_X"])
-    if y_min < 0:
-        y_min = 0
-    if y_max > int(feat_dict_raw["pixel_Y"]):
-        y_max = int(feat_dict_raw["pixel_Y"])
-    crop_img = img[y_min:y_max, x_min:x_max]
-    target_x_size = 600
-    y_size = int(crop_img.shape[1] * 600 / (crop_img.shape[0]+1))
-    crop_img_resized = resize(crop_img, (y_size, 600), interpolation=cv2.INTER_LINEAR)
+    out = medianBlur(sharpened_image, 3)
+    out = cv2.cvtColor(out, cv2.COLOR_RGB2BGR)
 
-    #remove background
-    out=crop_img_resized.copy()
-    out_blur = medianBlur(out, 13)
-    out_invert = cv2.bitwise_not(out_blur)
-    out_nobgd=remove_background(out_invert)
-    #imwrite(my_folder + '/' + my_image + '_ALLcorrected.jpg', out_nobgd)
+    #we upscale the image
+    out=upsample(out)
 
-    #change the colour of the background
-    # we convert back the image from BGR to RGB
-    #img_cv = out_nobgd.copy()
-    gray_img = cvtColor(out_nobgd, cv2.COLOR_BGR2GRAY)
-    gray_img_invert = cv2.bitwise_not(gray_img)
-    my_colour=(204,255,204)
-
-    # Fill image with red color
-    img_shape=out.shape
-    print(img_shape)
-    my_background=np.full(img_shape, my_colour, np.uint8)
-    #my_background=cv2.cvtColor(my_background, cv2.COLOR_RGB2RGBA)
-    #cv2.rectangle(whiteblankimage, pt1=(200,200), pt2=(300,300), color=(0,0,255), thickness=-1)
-    #out = img_cv.copy()
-    out[gray_img_invert == 255] = my_background[gray_img_invert == 255]
-    out = medianBlur(out, 5)
     imwrite(my_folder + '/' + my_image + '_ALLcorrected.jpg', out)
 
     # return out features before and after modifications
@@ -547,7 +562,7 @@ def auto_portraitImage_optimisation(my_image, my_folder=depotdir,
     #score_text1='Your previous score was '+str(total_proba_initial)
     score_text1='generated by TheGoodFace'
     score_text2='Your new score is '+str(total_proba_final)
-    write_results_on_image(my_image+'_ALLcorrected', score_text1, score_text2, my_folder)
+    write_results_on_image(my_image+'_ALLcorrected', score_text1, my_folder)
 
     #cv2.imwrite(my_folder + '/' + my_image + '_ALLcorrected.jpg', my_scored_image)
 
@@ -559,19 +574,16 @@ def auto_portraitImage_optimisation(my_image, my_folder=depotdir,
     #except:
     #    return 0, 0
 
-def write_results_on_image( my_image_name, my_text1, my_text2, my_folder=depotdir):
-    my_size1=50
-    font1 = ImageFont.truetype("Lobster-Regular.ttf", my_size1)
-    font2 = ImageFont.truetype("Lobster-Regular.ttf", my_size1*2)
+def write_results_on_image(my_image_name, my_text1, my_folder=depotdir):
     my_image = get_image(my_image_name, my_folder)
     width, height = my_image.size
+    my_size1=int(50*max([width,height])/600)
+    font1 = ImageFont.truetype("Lobster-Regular.ttf", my_size1)
     draw = ImageDraw.Draw(my_image)
     text1 = my_text1
-    text2 = my_text2
     textwidth, textheight = draw.textsize(text1)
     margin = 50
     x = textwidth + margin - 150
-    y = height - textheight - margin - 50
+    y = height - textheight - margin - 200
     draw.text((x, y), text1, font = font1, fill=(250,250,100))
-    #draw.text((x,y-50), text2, font=font2, fill=(250,250,100))
     my_image.save(my_folder + '/' + my_image_name +'.jpg', "JPEG")
