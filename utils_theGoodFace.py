@@ -56,7 +56,6 @@ def get_contrasted(image, mean_I, level=0.9, my_phi=1.1, my_theta=1):
         newImage0 = newImage0.astype(np.uint8)
     return newImage0
 
-
 def get_basic_features(my_img):
     '''
 
@@ -77,7 +76,6 @@ def get_basic_features(my_img):
     feat_list = [my_pixel_X, my_pixel_Y, max_I, min_I, mean_I, std_I]
 
     return feat_list
-
 
 def load_haarcascade_objects():
     cascade_face = CascadeClassifier('haarcascade_frontalface_default.xml')
@@ -221,10 +219,8 @@ def face_detect(my_image_object, my_cascade_face, my_cascade_profileface, my_cas
 
     return img_cv, face_features
 
-
 def variance_of_laplacian(image):
     '''
-
     :param image:
     :return:  compute the Laplacian of the image and then return the focus
      measure, which is simply the variance of the Laplacian
@@ -234,7 +230,6 @@ def variance_of_laplacian(image):
 
 def is_it_blurry(my_image_object):
     '''
-
     :param my_image_name:
     :param my_folder:
     :param fm_threshold:
@@ -253,7 +248,7 @@ def is_it_blurry(my_image_object):
 
 def color_analysis(my_image_object):
     '''
-        :param my_image_name:
+    :param my_image_name:
     :param my_folder:
     :return: color palette of the image as a list (major col, light pc and dark pc)
     '''
@@ -287,7 +282,6 @@ def color_analysis(my_image_object):
     dark_percent = round((float(dark_shade) / shade_count) * 100, 2)
     return [feature_col, light_percent, dark_percent]
 
-
 def average_pixel_width(my_image_object):
     '''
     :param my_image_name:
@@ -311,7 +305,6 @@ def remove_background(my_image_object):
      output = remove(my_image_object)
      return output
 
-
 def all_portrait_features(my_image_object,my_cascade_face, my_cascade_profileface, my_cascade_eye, my_cascade_smile, my_cascade_glasses):
     '''
     :param my_image_name:
@@ -327,7 +320,6 @@ def all_portrait_features(my_image_object,my_cascade_face, my_cascade_profilefac
     my_all_feat_list = my_all_feat_list + average_pixel_width(my_image_object)
     return my_all_feat_list
 
-
 def clean_feat_vector(my_vector_dict):
     '''
     :param my_vector_df:
@@ -339,7 +331,6 @@ def clean_feat_vector(my_vector_dict):
         if type(my_vector_dict[i]) == 'O':
             my_vector_dict[i] = int(my_vector_dict[i])
     return my_vector_dict
-
 
 def get_features_from_new_image(image_object,my_cascade_face, my_cascade_profileface, my_cascade_eye, my_cascade_smile, my_cascade_glasses):
     '''
@@ -374,7 +365,6 @@ def get_features_from_new_image(image_object,my_cascade_face, my_cascade_profile
     features_dict = clean_feat_vector(features_dict)
     return features_dict_ok, features_dict
 
-
 ### functions to predict score from models
 
 def load_scale_models(my_model_folder=basedir):
@@ -394,7 +384,6 @@ def load_scale_models(my_model_folder=basedir):
 
 def predict_proba_from_image_feat(my_image_feat, my_scaler, my_rfmodel, my_nnmodel, my_svcmodel):
     '''
-
     :param my_image_feat:
     :param my_scaler: scaler applied to image features
     :param my_rfmodel: RandomForest classifier model loaded
@@ -413,7 +402,6 @@ def predict_proba_from_image_feat(my_image_feat, my_scaler, my_rfmodel, my_nnmod
 
 
 ### functions to get old score, modify an image and get new score
-
 def auto_portraitImage_optimisation(my_image, my_folder=depotdir,
                                     my_gamma=1.0, my_clip_hist_percent=5, my_kernel_size=(5, 5), my_sigma=1.0,
                                     my_amount=1.0, my_threshold=0, my_crop_factor=2, my_param_1=51, my_param_2=10,
@@ -440,6 +428,8 @@ def auto_portraitImage_optimisation(my_image, my_folder=depotdir,
     start_time = time.time()
     initial_img = get_image(my_image, my_folder=my_folder)
     img = np.array(initial_img.convert('RGB'))
+
+    #0. remove 
 
     # 1. adjust_gamma
     invGamma = 1.0 / my_gamma

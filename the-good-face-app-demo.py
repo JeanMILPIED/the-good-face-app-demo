@@ -15,9 +15,12 @@ def portraitImage_optimisation(image_name):
 
 st.title('The-good-face 📷😎 (app demo)')
 st.header("Make a Lkdn portrait from your best shots")
-st.subheader('Our AI rates your portrait and proposes a better one')
-st.subheader('Step1 - Rate your current profile pic')
+st.text('Our smart AI is capable to rate your portrait and then to propose a better one.'
+        '\nIt has been trained on thousands of portrait pictures from all ages, genders \n'
+        'and ethnics to avoid any bias.'
+        '\nEnjoy! 🔥')
 
+st.subheader('Step1 - Rate your current profile pic')
 portrait_img=st.file_uploader('.jpg, .jpeg, .tiff format accepted')
 col1, col2 = st.columns(2)
 
@@ -30,15 +33,15 @@ if portrait_img!=None:
     col1.image(bytes_data)
     total_proba_initial, total_proba_final = auto_portraitImage_optimisation('portrait')
     #write probas
-    col1.write('Portrait is rated at {}'.format(total_proba_initial))
+    col1.write('AI rate {}  (0: bad - 1: great)'.format(total_proba_initial))
     if total_proba_initial > 0.7:
         col1.write("Your pic is good as it is 👍")
     else:
         col1.write("Your pic is bad 😌")
-    col2.subheader('Our proposed AI best portrait 🤩')
+    col2.subheader('AI best portrait 🤩')
     col2.write('Sorry if not excellent, we are not wizzards yet 🎇')
     col2.image('portrait_ALLcorrected.jpg')
-    col2.write('Our portrait is rated at {}'.format(total_proba_final))
+    col2.write('AI rate {}  (0: bad - 1: great)'.format(total_proba_final))
     if total_proba_final > 0.7:
         col2.write("You could use this new AI pic on Lkdn 👍")
     else:
@@ -49,7 +52,7 @@ st.subheader('Step2 - Take a new one with Webcam !')
 st.subheader('Some (professional) tips')
 st.text('1. Dress professionally \n2. Ensure light is bright \n3. Have a uniform background \n4. Look at camera and smile')
 st.subheader("Let's take a nice webcam pic")
-new_portrait_img = st.camera_input('Take a new webcam picture')
+new_portrait_img = st.camera_input('')
 col1, col2 = st.columns(2)
 
 if new_portrait_img!=None:
@@ -62,15 +65,15 @@ if new_portrait_img!=None:
 
     total_proba_initial, total_proba_final = auto_portraitImage_optimisation('new_portrait')
     # write probas
-    col1.write('New portrait is rated at {}'.format(total_proba_initial))
+    col1.write('AI rate {}  (0: bad - 1: great)'.format(total_proba_initial))
     if total_proba_initial > 0.7:
         col1.write("Your pic is good as it is 👍")
     else:
         col1.write("Your pic is bad 😌")
-    col2.subheader('Our proposed AI best portrait 🤩')
+    col2.subheader('AI best portrait 🤩')
     col2.write('Sorry if not excellent, we are not wizzards yet 🎇')
     col2.image('new_portrait_ALLcorrected.jpg')
-    col2.write('Our portrait is rated at {}'.format(total_proba_final))
+    col2.write('AI rate {}  (0: bad - 1: great)'.format(total_proba_final))
     if total_proba_final > 0.7:
         col2.write("You could use this new AI pic on Lkdn 👍")
     else:
