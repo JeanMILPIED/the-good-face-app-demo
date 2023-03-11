@@ -1,6 +1,7 @@
 joblib
 numpy
 opencv-contrib-python
+opencv-python-headless
 pandas
 Pillow
 scikit-learn
