@@ -1,6 +1,6 @@
 joblib
 numpy
-opencv-contrib-python
+opencv-contrib-python-headless
 opencv-python-headless
 pandas
 Pillow
