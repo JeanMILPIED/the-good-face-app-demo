@@ -526,22 +526,8 @@ def auto_portraitImage_optimisation(my_image, my_folder=depotdir,
     #img_cv = out_nobgd.copy()
     gray_img = cvtColor(out_nobgd, cv2.COLOR_BGR2GRAY)
     gray_img_invert = cv2.bitwise_not(gray_img)
-    # thresh = adaptiveThreshold(gray_img, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, my_param_1,my_param_2)
-    # thresh = cv2.bitwise_not(thresh)
-    # element = cv2.getStructuringElement(shape=cv2.MORPH_RECT, ksize=(my_k_size, my_k_size))
-    # morph_img = thresh.copy()
-    # cv2.morphologyEx(src=thresh, op=cv2.MORPH_CLOSE, kernel=element, dst=morph_img)
-    # contours, _ = cv2.findContours(morph_img, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    # areas = [cv2.contourArea(c) for c in contours]
-    # sorted_areas = np.sort(areas)
-    # number_of_areas = sorted_areas.shape[0]
-    #
-    # cnt = contours[areas.index(sorted_areas[-1])]  # the biggest contour
-    # mask = np.zeros(gray_img.shape, np.uint8)
-    # cv2.drawContours(mask, [cnt], 0, 255, -1)
-    # #blur = GaussianBlur(img_cv, (5, 5), my_param_3)
-
     my_colour=(204,255,204)
+
     # Fill image with red color
     img_shape=out.shape
     print(img_shape)
