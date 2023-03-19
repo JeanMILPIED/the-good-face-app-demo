@@ -21,6 +21,19 @@ st.text('Our smart AI is capable to rate your portrait and then to propose a bet
         '\nEnjoy! 🔥')
 
 st.subheader('Step1 - Rate your current profile pic')
+
+col_choice=st.radio("Choose Optimized background color",('pink','blue','white','green'), horizontal=True)
+if col_choice=='pink':
+    bckgd_col = (195, 195, 255)
+elif col_choice=='blue':
+    bckgd_col = (255, 237, 159)
+elif col_choice=='white':
+    bckgd_col = (255, 255, 255)
+elif col_choice == 'green':
+    bckgd_col = (154, 255, 167)
+else:
+    st.write("Missing colour choice")
+
 portrait_img=st.file_uploader('.jpg, .jpeg, .tiff format accepted')
 col1, col2 = st.columns(2)
 
@@ -31,7 +44,7 @@ if portrait_img!=None:
         f.write(bytes_data)
     col1.subheader('Your initial portrait')
     col1.image(bytes_data)
-    total_proba_initial, total_proba_final = auto_portraitImage_optimisation('portrait')
+    total_proba_initial, total_proba_final = auto_portraitImage_optimisation('portrait',bckgd_col)
     #write probas
     col1.write('AI rate {}  (0: bad - 1: great)'.format(total_proba_initial))
     if total_proba_initial > 0.7:

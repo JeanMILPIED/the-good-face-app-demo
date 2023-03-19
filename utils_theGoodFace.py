@@ -15,6 +15,7 @@ import joblib
 import time
 
 from rembg import remove
+import streamlit as st
 
 print(cv2.__version__)
 basedir = '.'
@@ -409,9 +410,25 @@ def predict_proba_from_image_feat(my_image_feat, my_scaler, my_rfmodel, my_nnmod
     my_result = [Y_pred_rf[0], Y_pred_nn[0], Y_pred_SVC[0]]
     return my_result
 
+def change_bckgd_colour(my_img, bckgd_col=(204,255,204)):
+    #change the colour of the background
+    # we convert back the image from BGR to RGB
+    #img_cv = out_nobgd.copy()
+    gray_img = cvtColor(my_img, cv2.COLOR_RGB2GRAY)
+    ret, mask = cv2.threshold(gray_img, 5, 255, cv2.THRESH_BINARY)
+    gray_img_invert = cv2.bitwise_not(mask)
+    my_colour=bckgd_col
+
+    # Fill image with background colour
+    img_shape=my_img.shape
+    print(img_shape)
+    my_background=np.full(img_shape, my_colour, np.uint8)
+    out=cv2.cvtColor(my_img, cv2.COLOR_RGB2BGR)
+    out[gray_img_invert == 255] = my_background[gray_img_invert == 255]
+    return out
 
 ### functions to get old score, modify an image and get new score
-def auto_portraitImage_optimisation(my_image, my_folder=depotdir,
+def auto_portraitImage_optimisation(my_image, bckgd_col, my_folder=depotdir,
                                     my_gamma=1.0, my_clip_hist_percent=5, my_kernel_size=(5, 5), my_sigma=1.0,
                                     my_amount=1.0, my_threshold=0, my_crop_factor=2, my_param_1=51, my_param_2=10,
                                     my_k_size=20, my_param_3=4):
@@ -439,7 +456,7 @@ def auto_portraitImage_optimisation(my_image, my_folder=depotdir,
     img = np.array(initial_img.convert('RGB'))
 
     #0. remove background of original image
-    img=remove_background(img)
+    #img=remove_background(img)
 
     # 4. crop the image
     #img = sharpened_image
@@ -467,24 +484,15 @@ def auto_portraitImage_optimisation(my_image, my_folder=depotdir,
 
     #remove background of cropped
     out=crop_img_resized.copy()
-    out_blur = medianBlur(out, 13)
+
+    out_blur = medianBlur(out, 11)
     # out_invert = cv2.bitwise_not(out_blur)
     out_nobgd=remove_background(out_blur)
+    out_nobgd = cvtColor(out_nobgd, cv2.COLOR_RGBA2GRAY)
+    my_background=np.full(out.shape, (0,0,0), np.uint8)
+    out[out_nobgd == 0] = my_background[out_nobgd == 0]
     #imwrite(my_folder + '/' + my_image + '_ALLcorrected.jpg', out_nobgd)
-
-    #change the colour of the background
-    # we convert back the image from BGR to RGB
-    #img_cv = out_nobgd.copy()
-    gray_img = cvtColor(out_nobgd, cv2.COLOR_RGB2GRAY)
-    gray_img_invert = cv2.bitwise_not(gray_img)
-    my_colour=(204,255,204)
-
-    # Fill image with background colour
-    img_shape=out.shape
-    print(img_shape)
-    my_background=np.full(img_shape, my_colour, np.uint8)
-    out=cv2.cvtColor(out, cv2.COLOR_RGB2BGR)
-    out[gray_img_invert == 255] = my_background[gray_img_invert == 255]
+    out=change_bckgd_colour(out, bckgd_col)
 
     # 1. adjust_gamma
     invGamma = 1.0 / my_gamma
