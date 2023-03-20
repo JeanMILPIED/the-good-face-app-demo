@@ -427,8 +427,44 @@ def change_bckgd_colour(my_img, bckgd_col=(204,255,204)):
     out[gray_img_invert == 255] = my_background[gray_img_invert == 255]
     return out
 
+### functions to get image score
+def portraitImage_score(my_image, my_folder=depotdir):
+    # load objects
+    my_cascade_face, my_cascade_profileface, my_cascade_eye, my_cascade_smile, my_cascade_glasses = load_haarcascade_objects()
+    # try:
+    start_time = time.time()
+    initial_img = get_image(my_image, my_folder=my_folder)
+
+    # we extract features from initial image
+    feat_dict, feat_dict_raw = get_features_from_new_image(initial_img, my_cascade_face, my_cascade_profileface,
+                                                           my_cascade_eye, my_cascade_smile, my_cascade_glasses)
+
+    feat_df_initial = list(feat_dict.values())
+
+    # we load scaler and models (3 models and we aggregate the score)
+    my_scaler, my_RFmodel, my_NNmodel, my_SVCmodel = load_scale_models()
+
+    result_initial = predict_proba_from_image_feat(feat_df_initial, my_scaler, my_RFmodel, my_NNmodel, my_SVCmodel)
+    total_proba = np.round(np.sum([result_initial[0][1], result_initial[1][1], result_initial[2][1]]) / 2,1)
+
+    return feat_dict_raw, total_proba
+
+def write_results_on_image(my_image_name, my_text1, my_folder=depotdir):
+    my_image = get_image(my_image_name, my_folder)
+    width, height = my_image.size
+    my_size1=int(50*max([width,height])/600)
+    font1 = ImageFont.truetype("Lobster-Regular.ttf", my_size1)
+    draw = ImageDraw.Draw(my_image)
+    text1 = my_text1
+    textwidth, textheight = draw.textsize(text1)
+    margin = 50
+    x = textwidth + margin - 150
+    y = height - textheight - margin - 200
+    draw.text((x, y), text1, font = font1, fill=(250,250,100))
+    my_image.save(my_folder + '/' + my_image_name +'.jpg', "JPEG")
+
 ### functions to get old score, modify an image and get new score
-def auto_portraitImage_optimisation(my_image, bckgd_col, my_folder=depotdir,
+def auto_portraitImage_optimisation(my_image, bckgd_col, feat_dict_raw, my_folder=depotdir,
                                     my_gamma=1.0, my_clip_hist_percent=5, my_kernel_size=(5, 5), my_sigma=1.0,
                                     my_amount=1.0, my_threshold=0, my_crop_factor=2, my_param_1=51, my_param_2=10,
                                     my_k_size=20, my_param_3=4):
@@ -450,18 +486,15 @@ def auto_portraitImage_optimisation(my_image, bckgd_col, my_folder=depotdir,
     '''
     #load objects
     my_cascade_face, my_cascade_profileface, my_cascade_eye, my_cascade_smile, my_cascade_glasses=load_haarcascade_objects()
-    #try:
+
     start_time = time.time()
     initial_img = get_image(my_image, my_folder=my_folder)
     img = np.array(initial_img.convert('RGB'))
 
-    #0. remove background of original image
-    #img=remove_background(img)
-
-    # 4. crop the image
-    #img = sharpened_image
+    # 1. crop the image
     img =cv2.cvtColor(img, cv2.COLOR_RGBA2RGB)
-    feat_dict, feat_dict_raw = get_features_from_new_image(initial_img,my_cascade_face, my_cascade_profileface, my_cascade_eye, my_cascade_smile, my_cascade_glasses)
+
+    # we get face info from the initial image feat dict
     central_x = int(feat_dict_raw["central_face_x"])
     central_y = int(feat_dict_raw["central_face_y"])
     crop_amplitude = int(np.sqrt(feat_dict_raw["face_area"]) / 2 * my_crop_factor)
@@ -484,14 +517,11 @@ def auto_portraitImage_optimisation(my_image, bckgd_col, my_folder=depotdir,
 
     #remove background of cropped
     out=crop_img_resized.copy()
-
     out_blur = medianBlur(out, 11)
-    # out_invert = cv2.bitwise_not(out_blur)
     out_nobgd=remove_background(out_blur)
     out_nobgd = cvtColor(out_nobgd, cv2.COLOR_RGBA2GRAY)
     my_background=np.full(out.shape, (0,0,0), np.uint8)
     out[out_nobgd == 0] = my_background[out_nobgd == 0]
-    #imwrite(my_folder + '/' + my_image + '_ALLcorrected.jpg', out_nobgd)
     out=change_bckgd_colour(out, bckgd_col)
 
     # 1. adjust_gamma
@@ -552,46 +582,29 @@ def auto_portraitImage_optimisation(my_image, bckgd_col, my_folder=depotdir,
 
     imwrite(my_folder + '/' + my_image + '_ALLcorrected.jpg', out)
 
-    # return out features before and after modifications
+    # return out features after modifications
     # we load scaler and models (3 models and we aggregate the score)
     my_scaler, my_RFmodel, my_NNmodel, my_SVCmodel = load_scale_models()
-
-    #we extract features from initial image
-    feat_df_initial = list(feat_dict.values())
-    print(len(feat_df_initial))
-    result_initial = predict_proba_from_image_feat(feat_df_initial, my_scaler, my_RFmodel, my_NNmodel, my_SVCmodel)
-    total_proba_initial = np.round(np.sum([result_initial[0][1], result_initial[1][1], result_initial[2][1]])/2,1)
 
     feat_df_dict_final, _ = get_features_from_new_image(get_image(my_image + '_ALLcorrected', my_folder), my_cascade_face, my_cascade_profileface, my_cascade_eye, my_cascade_smile, my_cascade_glasses)
     feat_df_final=list(feat_df_dict_final.values())
     print(len(feat_df_final))
     result_final = predict_proba_from_image_feat(feat_df_final, my_scaler, my_RFmodel, my_NNmodel, my_SVCmodel)
     total_proba_final = np.round(np.sum([result_final[0][1], result_final[1][1], result_final[2][1]])/2,1)
-    #score_text1='Your previous score was '+str(total_proba_initial)
     score_text1='generated by TheGoodFace'
-    score_text2='Your new score is '+str(total_proba_final)
     write_results_on_image(my_image+'_ALLcorrected', score_text1, my_folder)
 
-    #cv2.imwrite(my_folder + '/' + my_image + '_ALLcorrected.jpg', my_scored_image)
-
-    print("initial_proba= ", total_proba_initial)
-    print("final_proba= ", total_proba_final)
     end_time = time.time()
     print(f"Runtime of the program is {end_time - start_time}")
-    return total_proba_initial, total_proba_final
-    #except:
-    #    return 0, 0
+    return total_proba_final
 
-def write_results_on_image(my_image_name, my_text1, my_folder=depotdir):
-    my_image = get_image(my_image_name, my_folder)
-    width, height = my_image.size
-    my_size1=int(50*max([width,height])/600)
-    font1 = ImageFont.truetype("Lobster-Regular.ttf", my_size1)
-    draw = ImageDraw.Draw(my_image)
-    text1 = my_text1
-    textwidth, textheight = draw.textsize(text1)
-    margin = 50
-    x = textwidth + margin - 150
-    y = height - textheight - margin - 200
-    draw.text((x, y), text1, font = font1, fill=(250,250,100))
-    my_image.save(my_folder + '/' + my_image_name +'.jpg', "JPEG")
+def message_proba(the_proba):
+    if the_proba > 0.7:
+        message = "Your pic looks great as it is 👍"
+    elif the_proba > 0.4:
+        message = "Your pic is rated ok 😐"
+    else:
+        message = "Your pic is rated bad 😌. Lets try to improve it"
+    return message
+
+
