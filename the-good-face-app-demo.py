@@ -20,6 +20,16 @@ st.text('Our smart AI is capable to rate your portrait and then to propose a bet
         'and ethnics to avoid any bias.'
         '\nEnjoy! 🔥')
 
+with st.expander("The-Good-Face Core Values"):
+    st.write('''
+    1. We do not save any of your pictures 
+    2. Our AI is trained on unbiased and public portrait dataset: in gender, ethnics and age
+    3. We don't store your data
+    4. We know we are not the best in the world, but our tool is SAFE
+    5. We open source our code here: https://github.com/JeanMILPIED/the-good-face-app-demo
+    ''')
+
+
 st.subheader('Step1 - Rate your current profile pic')
 
 portrait_img=st.file_uploader('.jpg, .jpeg, .jfif format accepted')
@@ -30,14 +40,17 @@ if portrait_img!=None:
     with open('portrait.jpg', "wb") as f:
         f.write(bytes_data)
     st.subheader('Your initial portrait')
-
+    col1, col2= st.columns(2)
     initial_feat_dict, total_proba_initial = portraitImage_score('portrait', my_folder=depotdir)
-    st.image(bytes_data)
+    col1.image(bytes_data)
     if initial_feat_dict["type"]!=1:
 
         #write probas
-        st.write('AI rate {}  (0: bad - 1: great)'.format(total_proba_initial))
-        st.write(message_proba(total_proba_initial))
+        col1.write('AI rate {}  (0: bad - 1: great)'.format(total_proba_initial))
+        col1.write(message_proba(total_proba_initial))
+
+        #write basic features extraction of the image
+        col2.write(features_message(initial_feat_dict))
 
         st.subheader('Step2 - Launch our AI to optimize it 🤖')
         col_choice = st.radio("Choose Optimized background color", ('pink', 'blue', 'white', 'green'), horizontal=True)
@@ -53,16 +66,20 @@ if portrait_img!=None:
             st.write("Missing colour choice")
         val = st.button('Launch our AI 🚀')
         if val:
-            total_proba_final = auto_portraitImage_optimisation('portrait',bckgd_col,initial_feat_dict)
+            final_feat_dict, total_proba_final = auto_portraitImage_optimisation('portrait',bckgd_col,initial_feat_dict)
 
             st.subheader('AI best portrait 🤩')
             st.write('Sorry if not excellent, we are not wizzards yet 🎇')
-            st.image('portrait_ALLcorrected.jpg')
-            st.write('AI rate {}  (0: bad - 1: great)'.format(total_proba_final))
-            st.write(message_proba(total_proba_final))
+            col1, col2=st.columns(2)
+            col1.image('portrait_ALLcorrected.jpg')
+            col1.write('AI rate {}  (0: bad - 1: great)'.format(total_proba_final))
+            col1.write(message_proba(total_proba_final))
+
+            # write basic features extraction of the image
+            col2.write(features_message(final_feat_dict))
             portrait_img=None
     else:
-        st.write('OOOOUPS ! There is no portrait face detected in this image')
+        st.write('OOOOUPS ! There is no portrait face detected in this image. Load a new one 🚀')
 
 
 # st.subheader('Step3 - Take a new one with Webcam !')

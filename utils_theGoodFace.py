@@ -86,7 +86,7 @@ def load_haarcascade_objects():
     cascade_glasses = CascadeClassifier('haarcascade_eye_tree_eyeglasses.xml')
     return cascade_face, cascade_profileface, cascade_eye, cascade_smile, cascade_glasses
 
-def face_detect(my_image_object, my_cascade_face, my_cascade_profileface, my_cascade_eye, my_cascade_smile, my_cascade_glasses):
+def face_detect(my_image_object, my_cascade_face, my_cascade_profileface, my_cascade_eye, my_cascade_smile, my_cascade_glasses, face_factor=1.1):
     '''
 
     :param my_image_name:
@@ -113,8 +113,9 @@ def face_detect(my_image_object, my_cascade_face, my_cascade_profileface, my_cas
     # Convert into grayscale
     my_img_features = get_basic_features(img_other)
     gray = get_contrasted(img_other, my_img_features[4])
+
     # Detect faces
-    face = cascade_face.detectMultiScale(gray, 1.1, 5)
+    face = cascade_face.detectMultiScale(gray, face_factor, 5)
     profile_face = cascade_profileface.detectMultiScale(gray, 1.1, 5)
     if (len(face)) == 1:
         face_features.append(0)
@@ -315,7 +316,7 @@ def upsample(my_image_object):
     result = sr.upsample(my_image_object)
     return result
 
-def all_portrait_features(my_image_object,my_cascade_face, my_cascade_profileface, my_cascade_eye, my_cascade_smile, my_cascade_glasses):
+def all_portrait_features(my_image_object,my_cascade_face, my_cascade_profileface, my_cascade_eye, my_cascade_smile, my_cascade_glasses, face_factor=1.1):
     '''
     :param my_image_name:
     :param my_directory:
@@ -323,7 +324,7 @@ def all_portrait_features(my_image_object,my_cascade_face, my_cascade_profilefac
     '''
     my_all_feat_list = []
     my_all_feat_list = my_all_feat_list + get_basic_features(my_image_object)
-    _, my_face_feat = face_detect(my_image_object,my_cascade_face, my_cascade_profileface, my_cascade_eye, my_cascade_smile, my_cascade_glasses)
+    _, my_face_feat = face_detect(my_image_object,my_cascade_face, my_cascade_profileface, my_cascade_eye, my_cascade_smile, my_cascade_glasses, face_factor)
     my_all_feat_list = my_all_feat_list + my_face_feat
     my_all_feat_list = my_all_feat_list + is_it_blurry(my_image_object)
     my_all_feat_list = my_all_feat_list + color_analysis(my_image_object)
@@ -342,13 +343,13 @@ def clean_feat_vector(my_vector_dict):
             my_vector_dict[i] = int(my_vector_dict[i])
     return my_vector_dict
 
-def get_features_from_new_image(image_object,my_cascade_face, my_cascade_profileface, my_cascade_eye, my_cascade_smile, my_cascade_glasses):
+def get_features_from_new_image(image_object,my_cascade_face, my_cascade_profileface, my_cascade_eye, my_cascade_smile, my_cascade_glasses, face_factor=1.1):
     '''
     :param image_name:
     :param my_folder:
     :return: get the features vector from an image as a dataframe
     '''
-    features_vector = all_portrait_features(image_object,my_cascade_face, my_cascade_profileface, my_cascade_eye, my_cascade_smile, my_cascade_glasses)
+    features_vector = all_portrait_features(image_object,my_cascade_face, my_cascade_profileface, my_cascade_eye, my_cascade_smile, my_cascade_glasses, face_factor)
     features_vector = ['tGFA_image'] + features_vector
     features_keys=['filename', 'pixel_X', 'pixel_Y', 'max_I', 'min_I', 'mean_I', 'std_I', 'type', 'central_face_x',
                  'central_face_y', 'face_area', 'eye_status', 'tot_eye_area', 'face_angle', 'smile_status',
@@ -428,7 +429,7 @@ def change_bckgd_colour(my_img, bckgd_col=(204,255,204)):
     return out
 
 ### functions to get image score
-def portraitImage_score(my_image, my_folder=depotdir):
+def portraitImage_score(my_image, my_folder=depotdir, face_factor=1.1):
     # load objects
     my_cascade_face, my_cascade_profileface, my_cascade_eye, my_cascade_smile, my_cascade_glasses = load_haarcascade_objects()
     # try:
@@ -437,7 +438,7 @@ def portraitImage_score(my_image, my_folder=depotdir):
 
     # we extract features from initial image
     feat_dict, feat_dict_raw = get_features_from_new_image(initial_img, my_cascade_face, my_cascade_profileface,
-                                                           my_cascade_eye, my_cascade_smile, my_cascade_glasses)
+                                                           my_cascade_eye, my_cascade_smile, my_cascade_glasses, face_factor)
 
     feat_df_initial = list(feat_dict.values())
 
@@ -467,7 +468,7 @@ def write_results_on_image(my_image_name, my_text1, my_folder=depotdir):
 def auto_portraitImage_optimisation(my_image, bckgd_col, feat_dict_raw, my_folder=depotdir,
                                     my_gamma=1.0, my_clip_hist_percent=5, my_kernel_size=(5, 5), my_sigma=1.0,
                                     my_amount=1.0, my_threshold=0, my_crop_factor=2, my_param_1=51, my_param_2=10,
-                                    my_k_size=20, my_param_3=4):
+                                    my_k_size=20, my_param_3=4, face_factor=1.5):
     '''
     :param my_image: name of the input image
     :param my_folder: folder where image is loaded
@@ -586,7 +587,9 @@ def auto_portraitImage_optimisation(my_image, bckgd_col, feat_dict_raw, my_folde
     # we load scaler and models (3 models and we aggregate the score)
     my_scaler, my_RFmodel, my_NNmodel, my_SVCmodel = load_scale_models()
 
-    feat_df_dict_final, _ = get_features_from_new_image(get_image(my_image + '_ALLcorrected', my_folder), my_cascade_face, my_cascade_profileface, my_cascade_eye, my_cascade_smile, my_cascade_glasses)
+    my_cascade_face, my_cascade_profileface, my_cascade_eye, my_cascade_smile, my_cascade_glasses = load_haarcascade_objects()
+
+    feat_df_dict_final, feat_df_dict_raw = get_features_from_new_image(get_image(my_image + '_ALLcorrected', my_folder), my_cascade_face, my_cascade_profileface, my_cascade_eye, my_cascade_smile, my_cascade_glasses, face_factor)
     feat_df_final=list(feat_df_dict_final.values())
     print(len(feat_df_final))
     result_final = predict_proba_from_image_feat(feat_df_final, my_scaler, my_RFmodel, my_NNmodel, my_SVCmodel)
@@ -596,7 +599,7 @@ def auto_portraitImage_optimisation(my_image, bckgd_col, feat_dict_raw, my_folde
 
     end_time = time.time()
     print(f"Runtime of the program is {end_time - start_time}")
-    return total_proba_final
+    return feat_df_dict_raw, total_proba_final
 
 def message_proba(the_proba):
     if the_proba > 0.7:
@@ -605,6 +608,13 @@ def message_proba(the_proba):
         message = "Your pic is rated ok 😐"
     else:
         message = "Your pic is rated bad 😌. Lets try to improve it"
+    return message
+
+def features_message(feat_dict):
+    face_area_px=feat_dict["face_area"]
+    pc_face_area=str(feat_dict["face_%"])
+    total_pixels=str(round(feat_dict["pixel_X"]*feat_dict["pixel_Y"]/1E6,2))
+    message="In your {} Mega pixels portrait, the face is {}% of the image".format(total_pixels, pc_face_area)
     return message
 
 
