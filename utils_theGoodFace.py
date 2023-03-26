@@ -309,7 +309,7 @@ def remove_background(my_image_object):
 
 def upsample(my_image_object):
     sr = cv2.dnn_superres.DnnSuperResImpl_create()
-    path = "EDSR_x4.pb"
+    #path = "EDSR_x4.pb"
     path= "FSRCNN-small_x4.pb"
     sr.readModel(path)
     sr.setModel("fsrcnn", 4)
@@ -580,6 +580,9 @@ def auto_portraitImage_optimisation(my_image, bckgd_col, feat_dict_raw, my_folde
 
     #we upscale the image
     out=upsample(out)
+
+    #we denoise the image
+    #out = cv2.fastNlMeansDenoisingColored(out, None, 10, 10, 5, 7)
 
     imwrite(my_folder + '/' + my_image + '_ALLcorrected.jpg', out)
 
