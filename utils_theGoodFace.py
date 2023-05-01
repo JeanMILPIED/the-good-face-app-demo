@@ -617,7 +617,8 @@ def features_message(feat_dict):
     face_area_px=feat_dict["face_area"]
     pc_face_area=str(feat_dict["face_%"])
     total_pixels=str(round(feat_dict["pixel_X"]*feat_dict["pixel_Y"]/1E6,2))
-    message="In your {} Mega pixels portrait, the face is {}% of the image".format(total_pixels, pc_face_area)
+    pc_smile_area=str(feat_dict["smile_%"])
+    message="In your {} Mega pixels portrait, the face is {}% of the image, and there is {}% smile".format(total_pixels, pc_face_area, pc_smile_area)
     return message
 
 

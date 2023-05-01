@@ -15,7 +15,7 @@ def portraitImage_optimisation(image_name):
 
 st.title('The-good-face 📷😎 (app demo)')
 st.header("Make a Lkdn portrait from your best shots")
-st.text('Our smart AI is capable to rate your portrait and then to propose a better one.'
+st.write('Our smart AI is capable to rate your portrait and then to propose a better one.'
         '\nIt has been trained on thousands of portrait pictures from all ages, genders \n'
         'and ethnics to avoid any bias.'
         '\nEnjoy! 🔥')
