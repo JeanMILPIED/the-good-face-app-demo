@@ -464,6 +464,34 @@ def write_results_on_image(my_image_name, my_text1, my_folder=depotdir):
     draw.text((x, y), text1, font = font1, fill=(250,250,100))
     my_image.save(my_folder + '/' + my_image_name +'.jpg', "JPEG")
 
+def image_resize(image, width = None, height = None, inter = cv2.INTER_AREA):
+    # initialize the dimensions of the image to be resized and
+    # grab the image size
+    dim = None
+    (h, w) = image.shape[:2]
+
+    # if both the width and height are None, then return the original image
+    if width is None and height is None:
+        return image
+
+    # check to see if the width is None
+    if width is None:
+        # calculate the ratio of the height and construct the dimensions
+        r = height / float(h)
+        dim = (int(w * r), height)
+
+    # otherwise, the height is None
+    else:
+        # calculate the ratio of the width and construct the dimensions
+        r = width / float(w)
+        dim = (width, int(h * r))
+
+    # resize the image
+    resized = cv2.resize(image, dim, interpolation = inter)
+
+    # return the resized image
+    return resized
+
 ### functions to get old score, modify an image and get new score
 def auto_portraitImage_optimisation(my_image, bckgd_col, feat_dict_raw, my_folder=depotdir,
                                     my_gamma=1.0, my_clip_hist_percent=5, my_kernel_size=(5, 5), my_sigma=1.0,
@@ -491,6 +519,9 @@ def auto_portraitImage_optimisation(my_image, bckgd_col, feat_dict_raw, my_folde
     start_time = time.time()
     initial_img = get_image(my_image, my_folder=my_folder)
     img = np.array(initial_img.convert('RGB'))
+
+    #0. resize image
+    img=image_resize(img, width = 200)
 
     # 1. crop the image
     img =cv2.cvtColor(img, cv2.COLOR_RGBA2RGB)
